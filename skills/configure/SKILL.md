@@ -1,6 +1,6 @@
 ---
 name: configure
-description: Set up the Lark/Feishu channel — save App ID and App Secret, check channel status, guide through app creation. Use when the user pastes credentials, asks to configure Lark/Feishu, or wants to check channel status.
+description: Set up the Lark channel — save the app credentials and review access policy. Use when the user asks to configure Lark, provides app credentials, asks "how do I set this up" or "who can reach me," or wants to check channel status.
 user-invocable: true
 allowed-tools:
   - Read
@@ -9,9 +9,10 @@ allowed-tools:
   - Bash(mkdir *)
 ---
 
-# /lark:configure — Lark/Feishu Channel Setup
+# /lark:configure — Lark Channel Setup
 
-Writes App ID and App Secret to `~/.claude/channels/lark/.env` and orients the user on access policy. The server reads both files at boot.
+Writes the Lark app credentials to `~/.claude/channels/lark/.env` and orients the
+user on access policy. The server reads the file at boot.
 
 Arguments passed: `$ARGUMENTS`
 
@@ -23,80 +24,75 @@ Arguments passed: `$ARGUMENTS`
 
 Read both state files and give the user a complete picture:
 
-1. **Credentials** — check `~/.claude/channels/lark/.env` for `LARK_APP_ID` and `LARK_APP_SECRET`. Show set/not-set; if set, show masked values (`cli_xxx...`).
+1. **Credentials** — check `~/.claude/channels/lark/.env` for
+   `LARK_APP_ID` and `LARK_APP_SECRET`. Show set/not-set; if set, show first
+   4 chars of each, masked.
 
-2. **Domain** — check for `LARK_DOMAIN` in the env file. Show `feishu` (default) or `lark`.
+2. **Domain** — check for `LARK_DOMAIN`. Default is `open.larksuite.com`
+   (Lark international). For Feishu (China), it should be `open.feishu.cn`.
 
-3. **Access** — read `~/.claude/channels/lark/access.json` (missing = defaults). Show:
-   - DM policy and what it means
-   - Allowed chats: count and IDs
-   - Groups: count with chat_ids
+3. **Webhook** — check for `LARK_WEBHOOK_PORT` (default 9876). Show the
+   expected webhook URL format.
 
-4. **What next** — end with a concrete next step:
-   - No credentials → *"Run `/lark:configure <APP_ID> <APP_SECRET>` with credentials from the Lark Developer Console."*
-   - Credentials set, nobody allowed → *"Send your bot a DM in Lark. Your chat will be auto-added (open policy). Or run `/lark:access allow <chat_id>` directly."*
-   - Credentials set, someone allowed → *"Ready. DM your bot to reach the assistant."*
+4. **Encryption** — check for `LARK_ENCRYPT_KEY` and `LARK_VERIFICATION_TOKEN`.
+   Show set/not-set.
 
-**Push toward lockdown.** `open` policy is for initial setup. Once you have your chat_id, switch to `allowlist`:
-1. Tell the user their allowFrom list.
-2. Ask: *"Is that everyone who should reach you through this bot?"*
-3. If yes and policy is `open` → offer to run `/lark:access policy allowlist`.
-4. If no → *"Send a DM to capture your chat_id, then we'll lock it."*
+5. **Access** — read `~/.claude/channels/lark/access.json` (missing file
+   = defaults: `dmPolicy: "pairing"`, empty allowlist). Show:
+   - DM policy and what it means in one line
+   - Allowed senders: count, and list open_id values
+   - Pending pairings: count, with codes
+   - Group chats opted in: count
 
-### `<APP_ID> <APP_SECRET>` — save credentials
+6. **What next** — end with a concrete next step based on state:
+   - No credentials → *"Run `/lark:configure` with your Lark app credentials
+     from the Lark Open Platform Developer Console."*
+   - Credentials set, no webhook configured → *"Start ngrok with
+     `ngrok http 9876`, then set the webhook URL in Lark Developer Console
+     → Event Subscription → Request URL."*
+   - Credentials set, policy is pairing, nobody allowed → *"DM your bot on
+     Lark. It replies with a code; approve with `/lark:access pair <code>`."*
+   - Credentials set, someone allowed → *"Ready. DM your bot to reach the
+     assistant."*
 
-1. Parse: first token is APP_ID, second is APP_SECRET.
+**Push toward lockdown — always.** Once the IDs are in, pairing has done its
+job and should be turned off.
+
+### `<app_id> <app_secret>` — save credentials
+
+1. Treat first arg as app_id, second as app_secret (trim whitespace).
+   Lark App IDs start with `cli_`. App secrets are alphanumeric strings.
 2. `mkdir -p ~/.claude/channels/lark`
-3. Read existing `.env` if present; update/add both keys, preserve other keys.
-4. Write back, no quotes around values.
-5. Confirm, then show no-args status.
+3. Read existing `.env` if present; update/add the `LARK_APP_ID=` and
+   `LARK_APP_SECRET=` lines, preserve other keys. Write back, no quotes.
+4. Confirm, then show the no-args status so the user sees where they stand.
 
-### `<APP_ID> <APP_SECRET> lark` — save with Lark (international) domain
+### `domain <domain>` — set API domain
 
-Same as above but also write `LARK_DOMAIN=lark`.
+Set `LARK_DOMAIN` in `.env`. Valid values:
+- `open.larksuite.com` (Lark international, default)
+- `open.feishu.cn` (Feishu, China)
 
-### `domain <feishu|lark>` — change domain
+### `encrypt <encrypt_key> [verification_token]` — set encryption
 
-1. Read `.env`, update/add `LARK_DOMAIN=<value>`, write back.
-2. Confirm. Note: server needs restart.
+Set `LARK_ENCRYPT_KEY` and optionally `LARK_VERIFICATION_TOKEN` in `.env`.
+
+### `port <port>` — set webhook port
+
+Set `LARK_WEBHOOK_PORT` in `.env`. Default is 9876.
 
 ### `clear` — remove credentials
 
-Delete `LARK_APP_ID=` and `LARK_APP_SECRET=` lines. Warn the user their channel will stop working.
-
----
-
-## App setup guide (show when no credentials are set)
-
-Walk the user through creating a Lark/Feishu app:
-
-**For Feishu (飞书):**
-1. Open [Feishu Developer Console](https://open.feishu.cn/app)
-2. Click **Create App** → **Self-Built App**
-3. Fill in name and description
-4. Go to **Capabilities** → enable **Bot**
-5. Go to **Event Subscriptions** → set subscription mode to **Long Connection** (no webhook URL needed)
-6. Subscribe to event: `im.message.receive_v1`
-7. Go to **Permissions** → enable:
-   - `im:message` (read/write messages)
-   - `im:message.receive_v1` (receive messages)
-   - `im:resource` (for file/image uploads)
-8. Go to **App Credentials** → copy App ID and App Secret
-9. Publish the app (or add it to your workspace for testing)
-
-**For Lark (international):**
-- Same steps at [Lark Developer Console](https://open.larksuite.com/app)
-- Pass `lark` as the third argument: `/lark:configure <APP_ID> <APP_SECRET> lark`
-
-**Adding the bot to a workspace:**
-- Feishu: App page → **Availability** → enable for your org or specific users
-- Lark: Same under **Availability**
+Delete the `LARK_APP_ID=` and `LARK_APP_SECRET=` lines (or the file if those
+are the only lines).
 
 ---
 
 ## Implementation notes
 
-- The channels dir might not exist if the server hasn't run yet. Missing file = not configured.
-- The server reads `.env` once at boot. Credential changes need a session restart or `/reload-plugins`.
-- `access.json` is re-read on every inbound message — policy changes take effect immediately.
-- App ID format: `cli_xxxxxxxxxxxxxx` (Feishu) or similar for Lark.
+- The channels dir might not exist if the server hasn't run yet. Missing file
+  = not configured, not an error.
+- The server reads `.env` once at boot. Credential changes need a session
+  restart or `/reload-plugins`. Say so after saving.
+- `access.json` is re-read on every inbound message — policy changes via
+  `/lark:access` take effect immediately, no restart.
