@@ -1,0 +1,12 @@
+{
+  "name": "claude-channel-lark",
+  "description": "Lark/Feishu channel for Claude Code — messaging bridge with built-in access control via WSClient long connection. Manage credentials and access via /lark:configure and /lark:access.",
+  "version": "0.0.1",
+  "keywords": [
+    "lark",
+    "feishu",
+    "messaging",
+    "channel",
+    "mcp"
+  ]
+}

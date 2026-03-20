@@ -1,0 +1,13 @@
+{
+  "name": "claude-channel-lark",
+  "owner": {
+    "name": "padimin"
+  },
+  "plugins": [
+    {
+      "name": "claude-channel-lark",
+      "source": "./",
+      "description": "Lark/Feishu channel for Claude Code — messaging bridge with built-in access control via WSClient long connection."
+    }
+  ]
+}

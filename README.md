@@ -29,10 +29,11 @@ In your app:
 
 **2. Install the plugin.**
 
-Run `claude` to start a session, then:
+Add the marketplace and install:
 
 ```
-/plugin install lark@claude-plugins-official
+/plugin marketplace add padimin/claude-code-channel-lark
+/plugin install claude-channel-lark@claude-channel-lark
 ```
 
 **3. Save your credentials.**
@@ -46,12 +47,14 @@ For Lark (international, not Feishu):
 /lark:configure cli_xxxxxx YourAppSecret lark
 ```
 
-This writes credentials to `.claude/channels/lark/.env`.
+This writes credentials to `~/.claude/channels/lark/.env`.
 
 **4. Relaunch with the channel flag.**
 
+Channels are in research preview. Custom channels require the development flag:
+
 ```sh
-claude --channels plugin:lark@claude-plugins-official
+claude --dangerously-load-development-channels plugin:claude-channel-lark@claude-channel-lark
 ```
 
 **5. Send yourself a message.**
